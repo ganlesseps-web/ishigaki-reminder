@@ -35,4 +35,7 @@ jobs:
           else
             MSG="$EVENING"
           fi
-          curl -sS -X POST -H "Content-Type: application/json" -d "{\"content\":\"${MSG}\"}" "$WEBHOOK"
+          CODE=$(curl -sS -o /tmp/resp.txt -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"content\":\"${MSG}\"}" "$WEBHOOK")
+          echo "Discord HTTP応答: $CODE  (204ならDiscordが受理＝届いた)"
+          cat /tmp/resp.txt 2>/dev/null || true
+          test "$CODE" = "204"
