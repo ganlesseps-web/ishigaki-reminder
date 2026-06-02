@@ -1,0 +1,38 @@
+name: Ishigaki Reminder
+
+on:
+  schedule:
+    - cron: '0 23 * * *'   # 08:00 JST  朝のメニュー
+    - cron: '0 12 * * *'   # 21:00 JST  夜のチェックイン
+  workflow_dispatch:        # 手動テスト用
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord reminder
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          export TZ=Asia/Tokyo
+          DAYS=$(( ( $(date -d 2026-06-13 +%s) - $(date -d "$(date +%F)" +%s) ) / 86400 ))
+          DOW=$(date +%u)
+          HOUR=$(date +%H)
+          VIDEOS="📺 やり方動画\nドローイン: https://www.youtube.com/watch?v=XJD9jVI76qI\nデッドバグ: https://www.youtube.com/watch?v=Wb7_mqepkfw\n腰痛ストレッチ: https://www.youtube.com/watch?v=rGrN6T7yZtM"
+          case "$DOW" in
+            1|3|5) MENU='チョコザップの日💪（10〜15分）｜傾斜早歩き5分→チェストプレス3セット→余力で背中→早歩き5分。お腹＆腰ケアは家で5分🩹' ;;
+            6) MENU='ちょい長め散歩🚶（20〜30分）＋お腹＆腰ケア5分🩹' ;;
+            7) MENU='お休み😌｜歩く・腰ケア・食事だけ続ければ花マル' ;;
+            *) MENU='歩く🚶（8000歩めやす）＋お腹＆腰ケア5分🩹（膝抱え→猫のポーズ→ドローイン→デッドバグ）' ;;
+          esac
+          MORNING="☀️ おはようございます！\n🏝 石垣島まであと ${DAYS}日\n\n【今日のメニュー】\n${MENU}\n\n🍚 夜の主食は半分／水たっぷり／お菓子・お酒は控えめ\n💪 スキマ時間にお腹を30秒ギュッ（ドローイン）×3 を忘れずに！\n\n${VIDEOS}"
+          EVENING="🌙 今日のチェックイン\n🏝 石垣島まであと ${DAYS}日\n\n今日のメニューはできた？\n✅ できたら、このメッセージに 👍 を押すだけ\n（できなかった日も気にしない。明日またやればOK！）\n\n🛌 寝る前に5分の腰ゆるめストレッチ（膝抱え→膝倒し→お尻ストレッチ→腹式呼吸）でリラックス\n📸 3日に1回、お腹の写真も撮っておこう\n\n${VIDEOS}"
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            MSG="✅ GitHub方式テスト成功！これからは毎朝8時ごろ・毎晩21時ごろ、ここに自動で届きます。（石垣島まであと ${DAYS}日）"
+          elif [ "$HOUR" -lt 12 ]; then
+            MSG="$MORNING"
+          else
+            MSG="$EVENING"
+          fi
+          curl -sS -X POST -H "Content-Type: application/json" -d "{\"content\":\"${MSG}\"}" "$WEBHOOK"
